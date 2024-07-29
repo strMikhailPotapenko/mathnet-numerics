@@ -28,6 +28,7 @@
 // </copyright>
 
 using System;
+using System.Diagnostics;
 using System.Linq;
 
 using MathNet.Numerics.LinearRegression;
@@ -96,6 +97,55 @@ namespace MathNet.Numerics.Tests
 
             var respSeq = SimpleRegression.FitThroughOrigin(Generate.Map2(x, y, Tuple.Create));
             Assert.AreEqual(-0.467791, respSeq, 1e-4);
+        }
+
+        [Test]
+        public void FitsToBestLineThroughOriginSpanInterface()
+        {
+            // Mathematica: Fit[{{1,4.986},{2,2.347},{3,2.061},{4,-2.995},{5,-2.352},{6,-5.782}}, {x}, x]
+            // -> -0.467791 x
+
+            var x = Enumerable.Range(1, 6).Select(Convert.ToDouble).ToArray().AsSpan();
+            var y = new Span<double> (new[] { 4.986, 2.347, 2.061, -2.995, -2.352, -5.782 });
+
+            var resp = SimpleRegression.FitThroughOrigin(x, y);
+            Assert.AreEqual(-0.467791, resp, 1e-4);            
+        }
+
+        [TestCase(10000, 100)]
+        public void FitsToBestLineThroughOriginBenchmarkSpanVsArray(int dataLength, int windowLength)
+        {            
+            var xarray = new double[dataLength];
+            var yarray = new double[dataLength];
+
+            var window = windowLength;
+
+            var resultArray = new double[dataLength];
+            var resultSpan = new double[dataLength];
+
+            Stopwatch stopwatchArraySlicing = Stopwatch.StartNew();
+            // Use Array Slicing
+            for (int i = 0; i < xarray.Length - window; ++i)
+            {
+                var xx = xarray.Skip(i).Take(window).ToArray();
+                var yy = yarray.Skip(i).Take(window).ToArray();
+                resultArray[i] = SimpleRegression.FitThroughOrigin(xx, yy);
+            }
+            stopwatchArraySlicing.Stop();
+
+            Stopwatch stopwatchSpanSlicing = Stopwatch.StartNew();
+            // Use Span Slicing
+            for (int i = 0; i < xarray.Length - window; ++i)
+            {
+                var xx = xarray.AsSpan(i, window);
+                var yy = yarray.AsSpan(i, window);
+                resultSpan[i] = SimpleRegression.FitThroughOrigin(xx, yy);
+            }
+            stopwatchSpanSlicing.Stop();
+
+            Assert.AreEqual(resultArray, resultSpan);
+
+            Console.WriteLine($"Array Slicing Timing: {stopwatchArraySlicing.Elapsed.TotalMilliseconds} ms, Span Slicing Timing: {stopwatchSpanSlicing.Elapsed.TotalMilliseconds} ms");
         }
 
         [Test]

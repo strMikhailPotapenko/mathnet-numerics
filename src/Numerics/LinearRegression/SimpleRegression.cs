@@ -133,6 +133,29 @@ namespace MathNet.Numerics.LinearRegression
             return mxy / mxx;
         }
 
+        public static double FitThroughOrigin(Span<double> x, Span<double> y)
+        {
+            if (x.Length != y.Length)
+            {
+                throw new ArgumentException($"All sample vectors must have the same length. However, vectors with disagreeing length {x.Length} and {y.Length} have been provided. A sample with index i is given by the value at index i of each provided vector.");
+            }
+
+            if (x.Length <= 1)
+            {
+                throw new ArgumentException($"A regression of the requested order requires at least {2} samples. Only {x.Length} samples have been provided.");
+            }
+
+            double mxy = 0.0;
+            double mxx = 0.0;
+            for (int i = 0; i < x.Length; i++)
+            {
+                mxx += x[i] * x[i];
+                mxy += x[i] * y[i];
+            }
+
+            return mxy / mxx;
+        }
+
 
         /// <summary>
         /// Least-Squares fitting the points (x,y) to a line y : x -> b*x,
